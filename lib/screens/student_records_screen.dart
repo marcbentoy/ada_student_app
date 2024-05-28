@@ -35,52 +35,59 @@ class _ViewRecordsScreenState extends State<ViewRecordsScreen> {
 
     records.clear();
 
-    final responses = await pb.collection('records').getFullList(
-          sort: '-created,-entryDate',
+    await pb
+        .collection('records')
+        .getFullList(
+          sort: '-created',
           filter: 'student="${widget.studentId}"',
-        );
+        )
+        .then((responseData) async {
+      debugPrint(responseData.first.toString());
 
-    debugPrint(responses.first.toString());
+      final studenData =
+          await pb.collection('students').getOne(widget.studentId);
 
-    final studenData = await pb.collection('students').getOne(widget.studentId);
+      for (var response in responseData) {
+        records.add(EntryModel(
+          isOut: response.data["entry"] == "in" ? false : true,
+          roomName: response.data["room"],
+          studentId: studenData.data["schoolId"],
+          studentName: studenData.data["name"],
+          entryDate: DateTime.parse(response.data["entryDate"] == ""
+                  ? response.created
+                  : response.data["entryDate"])
+              .toLocal(),
+        ));
+      }
 
-    for (var response in responses) {
-      records.add(EntryModel(
-        isOut: response.data["entry"] == "in" ? false : true,
-        roomName: response.data["room"],
-        studentId: studenData.data["schoolId"],
-        studentName: studenData.data["name"],
-        entryDate: DateTime.parse(response.data["entryDate"] == ""
-            ? response.created
-            : response.data["entryDate"]),
-      ));
-    }
+      setState(() {
+        records;
+      });
 
-    setState(() {
-      records;
-    });
+      heatMapData.clear();
+      for (var element in records) {
+        heatMapData[
+            DateTime.parse(DateFormat("yyyy-MM-dd").format(element.entryDate))
+                .toLocal()] = (heatMapData[DateTime.parse(
+                        DateFormat("yyyy-MM-dd").format(element.entryDate))
+                    .toLocal()] ??
+                0) +
+            1;
+      }
 
-    heatMapData.clear();
-    for (var element in records) {
-      heatMapData[DateTime.parse(
-          DateFormat("yyyy-MM-dd").format(element.entryDate))] = (heatMapData[
-                  DateTime.parse(
-                      DateFormat("yyyy-MM-dd").format(element.entryDate))] ??
-              0) +
-          1;
-    }
-
-    setState(() {
-      heatMapData;
+      setState(() {
+        heatMapData;
+      });
     });
   }
 
   void getHeatMapData() {
     for (var element in records) {
-      heatMapData[DateTime.parse(
-          DateFormat("yyyy-MM-dd").format(element.entryDate))] = (heatMapData[
-                  DateTime.parse(
-                      DateFormat("yyyy-MM-dd").format(element.entryDate))] ??
+      heatMapData[
+          DateTime.parse(DateFormat("yyyy-MM-dd").format(element.entryDate))
+              .toLocal()] = (heatMapData[DateTime.parse(
+                      DateFormat("yyyy-MM-dd").format(element.entryDate))
+                  .toLocal()] ??
               0) +
           1;
     }
